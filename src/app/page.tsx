@@ -17,11 +17,11 @@ export default function Home() {
   const [username, setUserName] = useState("You");
   const [showMeme, setShowMeme] = useState(false);
 
-  // ✅ Correct usage of Farcaster SDK to fetch viewer
+  // ✅ Correct Farcaster viewer fetch method
   useEffect(() => {
     const init = async () => {
       try {
-        const user = sdk.viewer;
+        const user = sdk.state.viewer;
         if (user?.canInteract && user.fid) {
           setUserName(user.username || "You");
         }
@@ -96,7 +96,10 @@ export default function Home() {
             height={300}
             className="rounded-xl shadow-md"
           />
-          <button onClick={restart} className="mt-4 px-4 py-2 bg-brown-600 text-white rounded-xl">
+          <button
+            onClick={restart}
+            className="mt-4 px-4 py-2 bg-brown-600 text-white rounded-xl"
+          >
             Restart
           </button>
         </div>
