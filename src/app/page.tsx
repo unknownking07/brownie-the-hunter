@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { sdk } from "@farcaster/miniapp-sdk";
 import confetti from "canvas-confetti";
+import { sdk } from "@farcaster/miniapp-sdk";
 import Image from "next/image";
 
 const GRID_SIZE = 5;
+const MAX_LEVEL = 69;
 const MEME_IMG = "/A_2D_digital_illustration_meme_features_a_cartoon_.png";
 
 type Tile = "empty" | "bone" | "mud";
@@ -14,39 +15,17 @@ export default function Home() {
   const [grid, setGrid] = useState<Tile[][]>([]);
   const [dogPos, setDogPos] = useState({ x: 0, y: 0 });
   const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(20);
   const [gameOver, setGameOver] = useState(false);
   const [level, setLevel] = useState(1);
-  const [userName, setUserName] = useState<string>("You");
+  const [userName, setUserName] = useState("You");
+  const [missionComplete, setMissionComplete] = useState(false);
 
-  const generateGrid = () => {
-    const newGrid: Tile[][] = [];
-    for (let y = 0; y < GRID_SIZE; y++) {
-      const row: Tile[] = [];
-      for (let x = 0; x < GRID_SIZE; x++) {
-        const rand = Math.random();
-        if (rand < 0.15 + level * 0.01) row.push("bone");
-        else if (rand < 0.25 + level * 0.01) row.push("mud");
-        else row.push("empty");
-      }
-      newGrid.push(row);
-    }
-    newGrid[0][0] = "empty";
-    return newGrid;
-  };
-
-  const restartLevel = () => {
-    setGrid(generateGrid());
-    setDogPos({ x: 0, y: 0 });
-    setScore(0);
-    setTimeLeft(Math.max(10, 30 - level)); // Faster timer per level
-    setGameOver(false);
-  };
-
+  // ✅ Farcaster user fetch
   useEffect(() => {
     const init = async () => {
       try {
-        const user = await sdk.getCurrentUser?.();
+        const user = await sdk?.user?.getCurrentUser?.();
         if (user?.viewerContext?.canInteract && user.fid) {
           setUserName(user.username || "You");
         }
@@ -57,18 +36,48 @@ export default function Home() {
     init();
   }, []);
 
-  useEffect(() => {
-    if (timeLeft > 0 && !gameOver) {
-      const timer = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && !gameOver) {
-      setGameOver(true);
+  // 🎯 Mission: Collect 3 bones per level
+  const bonesNeeded = 3 + level;
+
+  const generateGrid = () => {
+    const newGrid: Tile[][] = [];
+    for (let y = 0; y < GRID_SIZE; y++) {
+      const row: Tile[] = [];
+      for (let x = 0; x < GRID_SIZE; x++) {
+        const rand = Math.random();
+        if (rand < 0.15 + level * 0.005) row.push("bone");
+        else if (rand < 0.25 + level * 0.01) row.push("mud");
+        else row.push("empty");
+      }
+      newGrid.push(row);
     }
-  }, [timeLeft, gameOver]);
+    newGrid[0][0] = "empty"; // Starting tile safe
+    return newGrid;
+  };
+
+  const restartLevel = () => {
+    setGrid(generateGrid());
+    setDogPos({ x: 0, y: 0 });
+    setScore(0);
+    setTimeLeft(Math.max(10, 30 - level));
+    setGameOver(false);
+    setMissionComplete(false);
+  };
+
+  useEffect(() => {
+    if (!gameOver && !missionComplete) {
+      if (timeLeft > 0) {
+        const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+        return () => clearTimeout(timer);
+      } else {
+        setGameOver(true);
+      }
+    }
+  }, [timeLeft, gameOver, missionComplete]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (gameOver) return;
+      if (gameOver || missionComplete) return;
       let { x, y } = dogPos;
       if (e.key === "ArrowUp" && y > 0) y--;
       if (e.key === "ArrowDown" && y < GRID_SIZE - 1) y++;
@@ -76,48 +85,43 @@ export default function Home() {
       if (e.key === "ArrowRight" && x < GRID_SIZE - 1) x++;
 
       const tile = grid[y]?.[x];
-      if (tile === "bone") setScore((s) => s + 1);
-
-      const updated = [...grid];
-      updated[y][x] = "empty";
-      setGrid(updated);
+      if (tile === "bone") {
+        const newScore = score + 1;
+        setScore(newScore);
+        if (newScore >= bonesNeeded) {
+          confetti();
+          setMissionComplete(true);
+        }
+      }
 
       if (tile === "mud") {
-        setTimeout(() => setDogPos({ x, y }), 500);
+        setTimeout(() => setDogPos({ x, y }), 300);
       } else {
         setDogPos({ x, y });
       }
 
-      // 🎯 Win Condition: Advance Level
-      if (score + 1 >= level * 3) {
-        if (level === 69) {
-          confetti();
-          setGameOver(true);
-        } else {
-          confetti();
-          setLevel((lvl) => lvl + 1);
-          restartLevel();
-        }
-      }
+      const updated = [...grid];
+      updated[y][x] = "empty";
+      setGrid(updated);
     };
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [dogPos, grid, score, gameOver, level]);
+  }, [dogPos, grid, gameOver, missionComplete, score]);
 
   useEffect(() => {
     restartLevel();
   }, [level]);
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-orange-100 p-4">
-      <h1 className="text-3xl font-bold mb-2">🐶 Brownie’s Bone Hunt 🦴</h1>
-      <p className="mb-1">👤 Player: {userName}</p>
-      <p className="mb-1">🎮 Level: {level}</p>
-      <p className="mb-1">🦴 Score: {score}</p>
-      <p className="mb-3">⏱ Time Left: {timeLeft}s</p>
+    <main className="flex flex-col items-center justify-center min-h-screen bg-orange-100 p-4 text-center">
+      <h1 className="text-3xl font-bold mb-4 text-brown-700">🐶 Brownie’s Bone Hunt 🦴</h1>
+      <p className="mb-1 text-brown-800">👤 Player: {userName}</p>
+      <p className="mb-1 text-brown-800">🎮 Level: {level}</p>
+      <p className="mb-1 text-brown-800">⏱ Time Left: {timeLeft}s</p>
+      <p className="mb-4 text-brown-800">🦴 Bones Collected: {score}/{bonesNeeded}</p>
 
-      <div className="grid grid-cols-5 gap-1 my-4">
+      <div className="grid grid-cols-5 gap-1 my-2">
         {grid.map((row, y) =>
           row.map((tile, x) => {
             const isDog = dogPos.x === x && dogPos.y === y;
@@ -125,7 +129,6 @@ export default function Home() {
             if (isDog) content = "🐶";
             else if (tile === "bone") content = "🦴";
             else if (tile === "mud") content = "💩";
-
             return (
               <div
                 key={`${x}-${y}`}
@@ -139,30 +142,32 @@ export default function Home() {
       </div>
 
       {gameOver && (
-        <div className="text-center mt-4">
-          {level === 69 ? (
+        <div className="mt-4">
+          <p className="text-xl font-semibold text-red-600">💀 Time’s up! Try again.</p>
+          <button
+            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            onClick={restartLevel}
+          >
+            Retry Level
+          </button>
+        </div>
+      )}
+
+      {missionComplete && (
+        <div className="mt-4">
+          {level === MAX_LEVEL ? (
             <>
-              <p className="text-xl font-bold mb-2">
-                🎉 Congrats you horny dog! You finished level 69!
-              </p>
-              <Image
-                src={MEME_IMG}
-                alt="Horny Dog Meme"
-                width={400}
-                height={400}
-                className="rounded-xl shadow-lg"
-              />
+              <h2 className="text-2xl font-bold text-pink-600">🎉 Congrats you horny dog! 🐕</h2>
+              <Image src={MEME_IMG} alt="Horny dog meme" width={300} height={300} className="rounded mt-4" />
             </>
           ) : (
             <>
-              <p className="text-xl font-bold mb-2">
-                ⌛ Game Over! You reached level {level}.
-              </p>
+              <p className="text-green-700 text-xl font-semibold">🎯 Mission Complete!</p>
               <button
-                onClick={restartLevel}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="mt-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                onClick={() => setLevel((lvl) => lvl + 1)}
               >
-                Try Again
+                Go to Level {level + 1}
               </button>
             </>
           )}
