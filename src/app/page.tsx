@@ -17,16 +17,16 @@ export default function Home() {
   const [username, setUserName] = useState("You");
   const [showMeme, setShowMeme] = useState(false);
 
-  // ✅ Correct Farcaster viewer fetch method
+  // ✅ Proper Farcaster MiniApp SDK usage
   useEffect(() => {
     const init = async () => {
       try {
-        const user = sdk.state.viewer;
-        if (user?.canInteract && user.fid) {
-          setUserName(user.username || "You");
+        const { viewer } = await sdk.init();
+        if (viewer?.canInteract && viewer.fid) {
+          setUserName(viewer.username || "You");
         }
       } catch (e) {
-        console.warn("Farcaster SDK error", e);
+        console.warn("Farcaster SDK init failed", e);
       }
     };
     init();
