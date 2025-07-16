@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { sdk, getCurrentUser } from "@farcaster/miniapp-sdk";
+import { sdk } from "@farcaster/miniapp-sdk";
 import confetti from "canvas-confetti";
 import Image from "next/image";
 
@@ -39,7 +39,7 @@ export default function Home() {
     setGrid(generateGrid());
     setDogPos({ x: 0, y: 0 });
     setScore(0);
-    setTimeLeft(Math.max(10, 30 - level)); // faster timer each level
+    setTimeLeft(Math.max(10, 30 - level)); // Faster timer per level
     setGameOver(false);
   };
 
@@ -88,7 +88,7 @@ export default function Home() {
         setDogPos({ x, y });
       }
 
-      // 🎯 Mission Complete Condition (Score needed grows with level)
+      // 🎯 Win Condition: Advance Level
       if (score + 1 >= level * 3) {
         if (level === 69) {
           confetti();
@@ -107,7 +107,7 @@ export default function Home() {
 
   useEffect(() => {
     restartLevel();
-  }, []);
+  }, [level]);
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen bg-orange-100 p-4">
