@@ -21,8 +21,8 @@ export default function Home() {
   useEffect(() => {
     const init = async () => {
       try {
-        const user = await sdk.getCurrentUser?.();
-        if (user?.viewerContext?.canInteract && user.fid) {
+        const user = sdk.viewer;
+        if (user?.canInteract && user.fid) {
           setUserName(user.username || "You");
         }
       } catch (e) {
