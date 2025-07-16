@@ -17,11 +17,12 @@ export default function Home() {
   const [username, setUserName] = useState("You");
   const [showMeme, setShowMeme] = useState(false);
 
-  // Fetch Farcaster username
+  // ✅ Get Farcaster viewer
   useEffect(() => {
     const init = async () => {
       try {
-        const user = sdk.viewer;
+        await sdk.ready();
+        const user = sdk.state.viewer;
         if (user?.canInteract && user.fid) {
           setUserName(user.username || "You");
         }
@@ -32,6 +33,7 @@ export default function Home() {
     init();
   }, []);
 
+  // ✅ Level up when enough bones are collected
   useEffect(() => {
     if (collected >= bonesNeeded) {
       if (level === TOTAL_LEVELS) {
@@ -40,14 +42,14 @@ export default function Home() {
         return;
       }
       setLevel((prev) => prev + 1);
-      const newBones = Math.min(bonesNeeded + 1, 20);
-      setBonesNeeded(newBones);
-      setGridSize(Math.min(gridSize + 1, 9));
+      setBonesNeeded((prev) => Math.min(prev + 1, 20));
+      setGridSize((g) => Math.min(g + 1, 9));
       setCollected(0);
       confetti();
     }
-  }, [collected]);
+  }, [collected, bonesNeeded, level]);
 
+  // ✅ Generate bone tiles
   useEffect(() => {
     if (gameOver) return;
     const totalTiles = gridSize * gridSize;
@@ -59,6 +61,7 @@ export default function Home() {
     setBones(newBones);
   }, [gridSize, bonesNeeded, level, gameOver]);
 
+  // ✅ Handle tap
   const collect = (id: number) => {
     setBones((prev) =>
       prev.map((b) =>
@@ -73,6 +76,7 @@ export default function Home() {
     }
   };
 
+  // ✅ Restart game
   const restart = () => {
     setLevel(1);
     setBonesNeeded(3);
@@ -85,7 +89,10 @@ export default function Home() {
   return (
     <main className="min-h-screen p-4 flex flex-col items-center justify-center bg-amber-100 text-brown-800">
       <h1 className="text-2xl font-bold mb-2">🐶 Brownie’s Bone Hunt</h1>
-      <p className="text-sm mb-4">Level {level} • Bones needed: {bonesNeeded}</p>
+      <p className="text-sm mb-4">
+        Level {level} • Bones needed: {bonesNeeded}
+      </p>
+
       {showMeme ? (
         <div className="text-center">
           <p className="text-xl font-bold mb-2">Congrats you horny dog 😏</p>
@@ -96,7 +103,12 @@ export default function Home() {
             height={300}
             className="rounded-xl shadow-md"
           />
-          <button onClick={restart} className="mt-4 px-4 py-2 bg-brown-600 text-white rounded-xl">Restart</button>
+          <button
+            onClick={restart}
+            className="mt-4 px-4 py-2 bg-brown-600 text-white rounded-xl"
+          >
+            Restart
+          </button>
         </div>
       ) : (
         <>
