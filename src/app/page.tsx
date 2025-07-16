@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
 import confetti from "canvas-confetti";
 import Image from "next/image";
-import Meme from "@/public/A_2D_digital_illustration_meme_features_a_cartoon_.png";
 
 const TOTAL_LEVELS = 69;
 
@@ -91,7 +90,7 @@ export default function Home() {
         <div className="text-center">
           <p className="text-xl font-bold mb-2">Congrats you horny dog 😏</p>
           <Image
-            src={Meme}
+            src="/A_2D_digital_illustration_meme_features_a_cartoon_.png"
             alt="Dog Meme"
             width={300}
             height={300}
