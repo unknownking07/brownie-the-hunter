@@ -167,7 +167,9 @@ export default function Home() {
 
   // Cleanup mud timeout
   useEffect(() => {
-    return () => mudTimeout.current && clearTimeout(mudTimeout.current);
+    return () => {
+      if (mudTimeout.current) clearTimeout(mudTimeout.current);
+    };
   }, []);
 
   // Restart game
