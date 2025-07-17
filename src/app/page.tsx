@@ -1,36 +1,69 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
-import confetti from "canvas-confetti";
 import Image from "next/image";
 
-// Add BoneTile type
-type BoneTile = {
-  id: number;
-  hasBone: boolean;
-  collected: boolean;
+// Types for grid tiles
+const GRID_SIZE = 5;
+const GAME_TIME = 30; // seconds
+const NUM_BONES = 6;
+const NUM_MUDS = 4;
+
+// Tile types
+const TILE_EMPTY = "empty";
+const TILE_BONE = "bone";
+const TILE_MUD = "mud";
+
+// Emoji for each tile
+const TILE_EMOJI = {
+  [TILE_EMPTY]: "🌱",
+  [TILE_BONE]: "🦴",
+  [TILE_MUD]: "💩",
 };
 
-const TOTAL_LEVELS = 69;
+// Dog sprite
+const DOG_EMOJI = "🐶";
+
+function getRandomPositions(count, exclude = []) {
+  const positions = [];
+  while (positions.length < count) {
+    const pos = {
+      x: Math.floor(Math.random() * GRID_SIZE),
+      y: Math.floor(Math.random() * GRID_SIZE),
+    };
+    if (
+      !positions.some((p) => p.x === pos.x && p.y === pos.y) &&
+      !exclude.some((p) => p.x === pos.x && p.y === pos.y)
+    ) {
+      positions.push(pos);
+    }
+  }
+  return positions;
+}
 
 export default function Home() {
-  const [level, setLevel] = useState(1);
-  const [bonesNeeded, setBonesNeeded] = useState(3);
-  const [gridSize, setGridSize] = useState(3);
-  // Type bones state as BoneTile[]
-  const [bones, setBones] = useState<BoneTile[]>([]);
-  const [collected, setCollected] = useState(0);
+  const [grid, setGrid] = useState(
+    Array(GRID_SIZE)
+      .fill(null)
+      .map(() => Array(GRID_SIZE).fill(TILE_EMPTY))
+  );
+  const [player, setPlayer] = useState({ x: 0, y: 0 });
+  const [bonesLeft, setBonesLeft] = useState(NUM_BONES);
+  const [score, setScore] = useState(0);
+  const [timer, setTimer] = useState(GAME_TIME);
   const [gameOver, setGameOver] = useState(false);
   const [username, setUserName] = useState("You");
-  const [showMeme, setShowMeme] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]); // stub
+  const [showShare, setShowShare] = useState(false);
+  const mudTimeout = useRef(null);
+  const [isSlowed, setIsSlowed] = useState(false);
 
-  // ✅ Get Farcaster viewer
+  // Setup Farcaster MiniApp SDK
   useEffect(() => {
     const init = async () => {
       try {
         await sdk.actions.ready();
-        // No user info available from SDK, so just use default username
       } catch (e) {
         console.warn("Farcaster SDK error", e);
       }
@@ -38,103 +71,188 @@ export default function Home() {
     init();
   }, []);
 
+  // Initialize grid with bones and mud
   useEffect(() => {
-    if (collected >= bonesNeeded) {
-      if (level === TOTAL_LEVELS) {
-        setShowMeme(true);
-        setGameOver(true);
-        return;
-      }
-      setLevel((prev) => prev + 1);
-      const newBones = Math.min(bonesNeeded + 1, 20);
-      setBonesNeeded(newBones);
-      setGridSize((g) => Math.min(g + 1, 9));
-      setCollected(0);
-      confetti();
-    }
-  }, [collected, bonesNeeded, level]);
+    const playerStart = { x: 0, y: 0 };
+    const bonePositions = getRandomPositions(NUM_BONES, [playerStart]);
+    const mudPositions = getRandomPositions(
+      NUM_MUDS,
+      [playerStart, ...bonePositions]
+    );
+    const newGrid = Array(GRID_SIZE)
+      .fill(null)
+      .map(() => Array(GRID_SIZE).fill(TILE_EMPTY));
+    bonePositions.forEach((pos) => {
+      newGrid[pos.y][pos.x] = TILE_BONE;
+    });
+    mudPositions.forEach((pos) => {
+      newGrid[pos.y][pos.x] = TILE_MUD;
+    });
+    setGrid(newGrid);
+    setPlayer(playerStart);
+    setBonesLeft(NUM_BONES);
+    setScore(0);
+    setTimer(GAME_TIME);
+    setGameOver(false);
+    setIsSlowed(false);
+    setShowShare(false);
+  }, []);
 
+  // Timer
   useEffect(() => {
     if (gameOver) return;
-    const totalTiles = gridSize * gridSize;
-    const newBones = Array.from({ length: totalTiles }, (_, i) => ({
-      id: i,
-      hasBone: Math.random() < bonesNeeded / totalTiles,
-      collected: false,
-    }));
-    setBones(newBones);
-  }, [gridSize, bonesNeeded, level, gameOver]);
-
-  const collect = (id: number) => {
-    setBones((prev) =>
-      prev.map((b) =>
-        b.id === id && b.hasBone && !b.collected
-          ? { ...b, collected: true }
-          : b
-      )
-    );
-    const target = bones.find((b) => b.id === id);
-    if (target?.hasBone && !target.collected) {
-      setCollected((c) => c + 1);
+    if (timer <= 0) {
+      setGameOver(true);
+      setShowShare(true);
+      return;
     }
-  };
+    const interval = setInterval(() => {
+      setTimer((t) => t - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timer, gameOver]);
 
-  const restart = () => {
-    setLevel(1);
-    setBonesNeeded(3);
-    setGridSize(3);
-    setCollected(0);
-    setGameOver(false);
-    setShowMeme(false);
-  };
+  // Keyboard controls
+  useEffect(() => {
+    if (gameOver) return;
+    const handleKeyDown = (e) => {
+      if (isSlowed) return;
+      let dx = 0,
+        dy = 0;
+      if (e.key === "ArrowUp") dy = -1;
+      else if (e.key === "ArrowDown") dy = 1;
+      else if (e.key === "ArrowLeft") dx = -1;
+      else if (e.key === "ArrowRight") dx = 1;
+      else return;
+      e.preventDefault();
+      movePlayer(dx, dy);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [player, grid, isSlowed, gameOver]);
+
+  // Move player
+  function movePlayer(dx, dy) {
+    const newX = Math.max(0, Math.min(GRID_SIZE - 1, player.x + dx));
+    const newY = Math.max(0, Math.min(GRID_SIZE - 1, player.y + dy));
+    if (newX === player.x && newY === player.y) return;
+    const tile = grid[newY][newX];
+    if (tile === TILE_BONE) {
+      setScore((s) => s + 1);
+      setBonesLeft((b) => b - 1);
+      updateGrid(newX, newY, TILE_EMPTY);
+    } else if (tile === TILE_MUD) {
+      setIsSlowed(true);
+      mudTimeout.current = setTimeout(() => setIsSlowed(false), 700);
+    }
+    setPlayer({ x: newX, y: newY });
+  }
+
+  // Update grid after collecting bone
+  function updateGrid(x, y, newType) {
+    setGrid((prev) => {
+      const copy = prev.map((row) => [...row]);
+      copy[y][x] = newType;
+      return copy;
+    });
+  }
+
+  // End game if all bones collected
+  useEffect(() => {
+    if (bonesLeft === 0 && !gameOver) {
+      setGameOver(true);
+      setShowShare(true);
+    }
+  }, [bonesLeft, gameOver]);
+
+  // Cleanup mud timeout
+  useEffect(() => {
+    return () => mudTimeout.current && clearTimeout(mudTimeout.current);
+  }, []);
+
+  // Restart game
+  function restart() {
+    window.location.reload(); // simplest way to reset everything
+  }
+
+  // Share button stub
+  function shareScore() {
+    // TODO: Integrate with Farcaster share
+    alert(`Share: I collected ${score} bones in Brownie’s Bone Hunt!`);
+  }
+
+  // Leaderboard stub
+  function showLeaderboard() {
+    alert("Leaderboard coming soon!");
+  }
 
   return (
     <main className="min-h-screen p-4 flex flex-col items-center justify-center bg-[#6B3F1D] text-white">
       <h1 className="text-2xl font-bold mb-2">🐶 Brownie’s Bone Hunt</h1>
-      <p className="text-sm mb-4">
-        Level {level} • Bones needed: {bonesNeeded}
-      </p>
-      {showMeme ? (
-        <div className="text-center">
-          <p className="text-xl font-bold mb-2">Congrats you horny dog 😏</p>
-          <Image
-            src="/A_2D_digital_illustration_meme_features_a_cartoon_.png"
-            alt="Dog Meme"
-            width={300}
-            height={300}
-            className="rounded-xl shadow-md"
-          />
+      <p className="text-sm mb-2">Use arrow keys to move. Collect 🦴, avoid 💩!</p>
+      <div className="flex gap-6 mb-4">
+        <span>⏰ {timer}s</span>
+        <span>🦴 {score}</span>
+      </div>
+      <div
+        className="grid gap-1 mb-4"
+        style={{
+          gridTemplateColumns: `repeat(${GRID_SIZE}, 2.5rem)`,
+          gridTemplateRows: `repeat(${GRID_SIZE}, 2.5rem)`,
+          background: "#4B2E13",
+          borderRadius: 12,
+          padding: 8,
+        }}
+      >
+        {grid.map((row, y) =>
+          row.map((tile, x) => (
+            <div
+              key={`${x},${y}`}
+              className={`flex items-center justify-center text-2xl rounded-lg border border-[#8B5E3C] ${
+                player.x === x && player.y === y
+                  ? "bg-yellow-200 text-brown-800 shadow-lg"
+                  : tile === TILE_MUD
+                  ? "bg-[#7B4F2A]"
+                  : "bg-[#6B3F1D]"
+              }`}
+              style={{ width: 40, height: 40 }}
+            >
+              {player.x === x && player.y === y
+                ? DOG_EMOJI
+                : tile === TILE_EMPTY
+                ? ""
+                : TILE_EMOJI[tile]}
+            </div>
+          ))
+        )}
+      </div>
+      {gameOver ? (
+        <div className="text-center mb-4">
+          <p className="text-xl font-bold mb-2">
+            Game Over! You collected {score} bone{score === 1 ? "" : "s"}.
+          </p>
           <button
             onClick={restart}
-            className="mt-4 px-4 py-2 bg-brown-600 text-white rounded-xl"
+            className="mt-2 px-4 py-2 bg-yellow-700 text-white rounded-xl mr-2"
           >
             Restart
           </button>
-        </div>
-      ) : (
-        <>
-          <div
-            className="grid gap-1"
-            style={{
-              gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-              maxWidth: 400,
-              width: "100%",
-            }}
+          <button
+            onClick={showLeaderboard}
+            className="mt-2 px-4 py-2 bg-yellow-900 text-white rounded-xl mr-2"
           >
-            {bones.map((tile) => (
-              <div
-                key={tile.id}
-                onClick={() => collect(tile.id)}
-                className={`aspect-square flex items-center justify-center text-2xl rounded-xl cursor-pointer select-none border border-brown-400 bg-white ${
-                  tile.collected ? "opacity-30" : "hover:bg-yellow-100"
-                }`}
-              >
-                {tile.collected ? "🦴" : tile.hasBone ? "❓" : "🐾"}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+            Leaderboard
+          </button>
+          <button
+            onClick={shareScore}
+            className="mt-2 px-4 py-2 bg-yellow-600 text-white rounded-xl"
+          >
+            Share
+          </button>
+        </div>
+      ) : isSlowed ? (
+        <div className="mb-2 text-yellow-200">Stuck in mud! 🐾</div>
+      ) : null}
       <p className="mt-6 text-xs text-white/80">Built by @{username}</p>
     </main>
   );
