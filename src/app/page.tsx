@@ -132,7 +132,7 @@ export default function Home() {
   }, [player, grid, isSlowed, gameOver]);
 
   // Move player
-  function movePlayer(dx, dy) {
+  function movePlayer(dx: number, dy: number) {
     const newX = Math.max(0, Math.min(GRID_SIZE - 1, player.x + dx));
     const newY = Math.max(0, Math.min(GRID_SIZE - 1, player.y + dy));
     if (newX === player.x && newY === player.y) return;
