@@ -89,9 +89,11 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen p-4 flex flex-col items-center justify-center bg-amber-100 text-brown-800">
+    <main className="min-h-screen p-4 flex flex-col items-center justify-center bg-[#6B3F1D] text-white">
       <h1 className="text-2xl font-bold mb-2">🐶 Brownie’s Bone Hunt</h1>
-      <p className="text-sm mb-4">Level {level} • Bones needed: {bonesNeeded}</p>
+      <p className="text-sm mb-4">
+        Level {level} • Bones needed: {bonesNeeded}
+      </p>
       {showMeme ? (
         <div className="text-center">
           <p className="text-xl font-bold mb-2">Congrats you horny dog 😏</p>
@@ -133,7 +135,7 @@ export default function Home() {
           </div>
         </>
       )}
-      <p className="mt-6 text-xs text-brown-700">Built by @{username}</p>
+      <p className="mt-6 text-xs text-white/80">Built by @{username}</p>
     </main>
   );
 }
