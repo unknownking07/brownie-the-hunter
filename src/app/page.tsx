@@ -26,7 +26,7 @@ const TILE_EMOJI = {
 const DOG_EMOJI = "🐶";
 
 function getRandomPositions(count: number, exclude: { x: number; y: number }[] = []): { x: number; y: number }[] {
-  const positions = [];
+  const positions: { x: number; y: number }[] = [];
   while (positions.length < count) {
     const pos = {
       x: Math.floor(Math.random() * GRID_SIZE),
