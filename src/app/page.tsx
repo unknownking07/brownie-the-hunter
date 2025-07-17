@@ -29,12 +29,7 @@ export default function Home() {
   useEffect(() => {
     const init = async () => {
       try {
-        // Use sdk.actions.ready() for compatibility
-        if (sdk.actions && sdk.actions.ready) {
-          await sdk.actions.ready();
-        } else if (sdk.ready) {
-          await sdk.ready();
-        }
+        await sdk.actions.ready();
         // Try to get viewer, fallback to default if not available
         const user = sdk.state?.viewer;
         if (user?.canInteract && user.fid) {
