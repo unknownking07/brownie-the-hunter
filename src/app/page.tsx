@@ -49,6 +49,30 @@ function getRandomPositions(
   return positions;
 }
 
+// Simple swipe detection hook
+import { useRef as useReactRef } from "react";
+
+function useSwipe(onSwipe: (dx: number, dy: number) => void) {
+  const touchStart = useReactRef<{ x: number; y: number } | null>(null);
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    if (!touchStart.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.current.x;
+    const dy = t.clientY - touchStart.current.y;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (Math.abs(dx) > 30) onSwipe(dx > 0 ? 1 : -1, 0);
+    } else {
+      if (Math.abs(dy) > 30) onSwipe(0, dy > 0 ? 1 : -1);
+    }
+    touchStart.current = null;
+  }
+  return { onTouchStart, onTouchEnd };
+}
+
 export default function Home() {
   const [level, setLevel] = useState(1);
   const [gridSize, setGridSize] = useState(START_GRID_SIZE);
@@ -221,6 +245,11 @@ export default function Home() {
     alert("Leaderboard coming soon!");
   }
 
+  // Swipe support
+  const swipeHandlers = useSwipe((dx, dy) => {
+    if (!gameOver && !levelComplete && !isSlowed) movePlayer(dx, dy);
+  });
+
   return (
     <main className="min-h-screen p-4 flex flex-col items-center justify-center bg-[#6B3F1D] text-white">
       <h1 className="text-2xl font-bold mb-2">🐶 Brownie’s Bone Hunt</h1>
@@ -238,6 +267,7 @@ export default function Home() {
           borderRadius: 12,
           padding: 8,
         }}
+        {...swipeHandlers}
       >
         {grid.map((row, y) =>
           row.map((tile, x) => (
@@ -260,6 +290,41 @@ export default function Home() {
             </div>
           ))
         )}
+      </div>
+      {/* On-screen arrow buttons for mobile/touch */}
+      <div className="flex gap-2 flex-col items-center mt-2 select-none md:hidden">
+        <div className="flex gap-2">
+          <button
+            aria-label="Up"
+            className="w-10 h-10 rounded-full bg-yellow-700 text-white text-2xl flex items-center justify-center shadow"
+            onClick={() => !gameOver && !levelComplete && !isSlowed && movePlayer(0, -1)}
+          >
+            ↑
+          </button>
+        </div>
+        <div className="flex gap-2">
+          <button
+            aria-label="Left"
+            className="w-10 h-10 rounded-full bg-yellow-700 text-white text-2xl flex items-center justify-center shadow"
+            onClick={() => !gameOver && !levelComplete && !isSlowed && movePlayer(-1, 0)}
+          >
+            ←
+          </button>
+          <button
+            aria-label="Down"
+            className="w-10 h-10 rounded-full bg-yellow-700 text-white text-2xl flex items-center justify-center shadow"
+            onClick={() => !gameOver && !levelComplete && !isSlowed && movePlayer(0, 1)}
+          >
+            ↓
+          </button>
+          <button
+            aria-label="Right"
+            className="w-10 h-10 rounded-full bg-yellow-700 text-white text-2xl flex items-center justify-center shadow"
+            onClick={() => !gameOver && !levelComplete && !isSlowed && movePlayer(1, 0)}
+          >
+            →
+          </button>
+        </div>
       </div>
       {levelComplete && !gameOver ? (
         <div className="text-center mb-4">
