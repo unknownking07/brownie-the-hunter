@@ -25,7 +25,7 @@ const TILE_EMOJI = {
 // Dog sprite
 const DOG_EMOJI = "🐶";
 
-function getRandomPositions(count, exclude = []) {
+function getRandomPositions(count: number, exclude: { x: number; y: number }[] = []): { x: number; y: number }[] {
   const positions = [];
   while (positions.length < count) {
     const pos = {
