@@ -53,10 +53,10 @@ export default function Home() {
   const [score, setScore] = useState(0);
   const [timer, setTimer] = useState(GAME_TIME);
   const [gameOver, setGameOver] = useState(false);
-  const [username, setUserName] = useState("You");
+  const [username, setUserName] = useState("unknownking");
   const [leaderboard, setLeaderboard] = useState([]); // stub
   const [showShare, setShowShare] = useState(false);
-  const mudTimeout = useRef(null);
+  const mudTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isSlowed, setIsSlowed] = useState(false);
 
   // Setup Farcaster MiniApp SDK
@@ -253,7 +253,7 @@ export default function Home() {
       ) : isSlowed ? (
         <div className="mb-2 text-yellow-200">Stuck in mud! 🐾</div>
       ) : null}
-      <p className="mt-6 text-xs text-white/80">Built by @{username}</p>
+      <p className="mt-6 text-xs text-white/80">Built by @unknownking</p>
     </main>
   );
 }
