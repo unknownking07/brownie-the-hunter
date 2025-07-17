@@ -25,17 +25,26 @@ export default function Home() {
   const [username, setUserName] = useState("You");
   const [showMeme, setShowMeme] = useState(false);
 
-  // ✅ Proper Farcaster MiniApp SDK usage
+  // ✅ Get Farcaster viewer
   useEffect(() => {
-    const readyApp = async () => {
+    const init = async () => {
       try {
-        await sdk.actions.ready();
-        // If user info becomes available from the SDK, setUserName here.
+        // Use sdk.actions.ready() for compatibility
+        if (sdk.actions && sdk.actions.ready) {
+          await sdk.actions.ready();
+        } else if (sdk.ready) {
+          await sdk.ready();
+        }
+        // Try to get viewer, fallback to default if not available
+        const user = sdk.state?.viewer;
+        if (user?.canInteract && user.fid) {
+          setUserName(user.username || "You");
+        }
       } catch (e) {
-        console.warn("Farcaster SDK ready() failed", e);
+        console.warn("Farcaster SDK error", e);
       }
     };
-    readyApp();
+    init();
   }, []);
 
   useEffect(() => {
