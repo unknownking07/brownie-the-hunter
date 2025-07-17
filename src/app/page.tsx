@@ -30,11 +30,7 @@ export default function Home() {
     const init = async () => {
       try {
         await sdk.actions.ready();
-        // Try to get viewer, fallback to default if not available
-        const user = sdk.state?.viewer;
-        if (user?.canInteract && user.fid) {
-          setUserName(user.username || "You");
-        }
+        // No user info available from SDK, so just use default username
       } catch (e) {
         console.warn("Farcaster SDK error", e);
       }
