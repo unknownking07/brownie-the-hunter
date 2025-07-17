@@ -149,7 +149,7 @@ export default function Home() {
   }
 
   // Update grid after collecting bone
-  function updateGrid(x, y, newType) {
+  function updateGrid(x: number, y: number, newType: string) {
     setGrid((prev) => {
       const copy = prev.map((row) => [...row]);
       copy[y][x] = newType;
