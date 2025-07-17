@@ -5,13 +5,21 @@ import { sdk } from "@farcaster/miniapp-sdk";
 import confetti from "canvas-confetti";
 import Image from "next/image";
 
+// Add BoneTile type
+type BoneTile = {
+  id: number;
+  hasBone: boolean;
+  collected: boolean;
+};
+
 const TOTAL_LEVELS = 69;
 
 export default function Home() {
   const [level, setLevel] = useState(1);
   const [bonesNeeded, setBonesNeeded] = useState(3);
   const [gridSize, setGridSize] = useState(3);
-  const [bones, setBones] = useState([]);
+  // Type bones state as BoneTile[]
+  const [bones, setBones] = useState<BoneTile[]>([]);
   const [collected, setCollected] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [username, setUserName] = useState("You");
