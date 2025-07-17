@@ -28,12 +28,16 @@ const TILE_EMOJI = {
 // Dog sprite
 const DOG_EMOJI = "🐶";
 
-function getRandomPositions(count: number, exclude: { x: number; y: number }[] = []): { x: number; y: number }[] {
+function getRandomPositions(
+  count: number,
+  gridSize: number,
+  exclude: { x: number; y: number }[] = []
+): { x: number; y: number }[] {
   const positions: { x: number; y: number }[] = [];
   while (positions.length < count) {
     const pos = {
-      x: Math.floor(Math.random() * GRID_SIZE),
-      y: Math.floor(Math.random() * GRID_SIZE),
+      x: Math.floor(Math.random() * gridSize),
+      y: Math.floor(Math.random() * gridSize),
     };
     if (
       !positions.some((p) => p.x === pos.x && p.y === pos.y) &&
@@ -91,9 +95,10 @@ export default function Home() {
     const { gridSize, bones, mud, timer } = getLevelConfig(level);
     setGridSize(gridSize);
     const playerStart = { x: 0, y: 0 };
-    const bonePositions = getRandomPositions(bones, [playerStart]);
+    const bonePositions = getRandomPositions(bones, gridSize, [playerStart]);
     const mudPositions = getRandomPositions(
       mud,
+      gridSize,
       [playerStart, ...bonePositions]
     );
     const newGrid = Array(gridSize)
