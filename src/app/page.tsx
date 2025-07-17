@@ -223,7 +223,7 @@ export default function Home() {
                 ? DOG_EMOJI
                 : tile === TILE_EMPTY
                 ? ""
-                : TILE_EMOJI[tile]}
+                : TILE_EMOJI[tile as keyof typeof TILE_EMOJI]}
             </div>
           ))
         )}
