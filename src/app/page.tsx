@@ -115,7 +115,7 @@ export default function Home() {
   // Keyboard controls
   useEffect(() => {
     if (gameOver) return;
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (isSlowed) return;
       let dx = 0,
         dy = 0;
