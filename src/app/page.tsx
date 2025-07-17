@@ -5,8 +5,11 @@ import { sdk } from "@farcaster/miniapp-sdk";
 import Image from "next/image";
 
 // Types for grid tiles
-const GRID_SIZE = 5;
-const GAME_TIME = 30; // seconds
+const START_GRID_SIZE = 5;
+const MAX_GRID_SIZE = 9;
+const MAX_LEVEL = 69;
+const START_GAME_TIME = 30; // seconds
+const MIN_GAME_TIME = 10; // seconds
 const NUM_BONES = 6;
 const NUM_MUDS = 4;
 
@@ -43,16 +46,19 @@ function getRandomPositions(count: number, exclude: { x: number; y: number }[] =
 }
 
 export default function Home() {
+  const [level, setLevel] = useState(1);
+  const [gridSize, setGridSize] = useState(START_GRID_SIZE);
   const [grid, setGrid] = useState(
-    Array(GRID_SIZE)
+    Array(START_GRID_SIZE)
       .fill(null)
-      .map(() => Array(GRID_SIZE).fill(TILE_EMPTY))
+      .map(() => Array(START_GRID_SIZE).fill(TILE_EMPTY))
   );
   const [player, setPlayer] = useState({ x: 0, y: 0 });
-  const [bonesLeft, setBonesLeft] = useState(NUM_BONES);
+  const [bonesLeft, setBonesLeft] = useState(0);
   const [score, setScore] = useState(0);
-  const [timer, setTimer] = useState(GAME_TIME);
+  const [timer, setTimer] = useState(START_GAME_TIME);
   const [gameOver, setGameOver] = useState(false);
+  const [levelComplete, setLevelComplete] = useState(false);
   const [username, setUserName] = useState("unknownking");
   const [leaderboard, setLeaderboard] = useState([]); // stub
   const [showShare, setShowShare] = useState(false);
@@ -71,17 +77,28 @@ export default function Home() {
     init();
   }, []);
 
-  // Initialize grid with bones and mud
+  // Helper to get per-level config
+  function getLevelConfig(level: number) {
+    const gridSize = Math.min(START_GRID_SIZE + Math.floor((level - 1) / 10), MAX_GRID_SIZE);
+    const bones = Math.min(3 + Math.floor(level * 1.1), gridSize * gridSize - 2);
+    const mud = Math.min(2 + Math.floor(level / 2), gridSize * gridSize - bones - 1);
+    const timer = Math.max(START_GAME_TIME - Math.floor(level * 0.4), MIN_GAME_TIME);
+    return { gridSize, bones, mud, timer };
+  }
+
+  // Initialize grid for current level
   useEffect(() => {
+    const { gridSize, bones, mud, timer } = getLevelConfig(level);
+    setGridSize(gridSize);
     const playerStart = { x: 0, y: 0 };
-    const bonePositions = getRandomPositions(NUM_BONES, [playerStart]);
+    const bonePositions = getRandomPositions(bones, [playerStart]);
     const mudPositions = getRandomPositions(
-      NUM_MUDS,
+      mud,
       [playerStart, ...bonePositions]
     );
-    const newGrid = Array(GRID_SIZE)
+    const newGrid = Array(gridSize)
       .fill(null)
-      .map(() => Array(GRID_SIZE).fill(TILE_EMPTY));
+      .map(() => Array(gridSize).fill(TILE_EMPTY));
     bonePositions.forEach((pos) => {
       newGrid[pos.y][pos.x] = TILE_BONE;
     });
@@ -90,17 +107,19 @@ export default function Home() {
     });
     setGrid(newGrid);
     setPlayer(playerStart);
-    setBonesLeft(NUM_BONES);
-    setScore(0);
-    setTimer(GAME_TIME);
-    setGameOver(false);
+    setBonesLeft(bones);
+    setTimer(timer);
     setIsSlowed(false);
+    setLevelComplete(false);
     setShowShare(false);
-  }, []);
+    setGameOver(false);
+    // Only reset score on level 1
+    if (level === 1) setScore(0);
+  }, [level]);
 
   // Timer
   useEffect(() => {
-    if (gameOver) return;
+    if (gameOver || levelComplete) return;
     if (timer <= 0) {
       setGameOver(true);
       setShowShare(true);
@@ -110,11 +129,11 @@ export default function Home() {
       setTimer((t) => t - 1);
     }, 1000);
     return () => clearInterval(interval);
-  }, [timer, gameOver]);
+  }, [timer, gameOver, levelComplete]);
 
   // Keyboard controls
   useEffect(() => {
-    if (gameOver) return;
+    if (gameOver || levelComplete) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isSlowed) return;
       let dx = 0,
@@ -129,12 +148,12 @@ export default function Home() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [player, grid, isSlowed, gameOver]);
+  }, [player, grid, isSlowed, gameOver, levelComplete]);
 
   // Move player
   function movePlayer(dx: number, dy: number) {
-    const newX = Math.max(0, Math.min(GRID_SIZE - 1, player.x + dx));
-    const newY = Math.max(0, Math.min(GRID_SIZE - 1, player.y + dy));
+    const newX = Math.max(0, Math.min(gridSize - 1, player.x + dx));
+    const newY = Math.max(0, Math.min(gridSize - 1, player.y + dy));
     if (newX === player.x && newY === player.y) return;
     const tile = grid[newY][newX];
     if (tile === TILE_BONE) {
@@ -159,11 +178,16 @@ export default function Home() {
 
   // End game if all bones collected
   useEffect(() => {
-    if (bonesLeft === 0 && !gameOver) {
-      setGameOver(true);
-      setShowShare(true);
+    if (bonesLeft === 0 && !gameOver && !levelComplete) {
+      if (level < MAX_LEVEL) {
+        setLevelComplete(true);
+        setTimeout(() => setLevel((l) => l + 1), 1200);
+      } else {
+        setGameOver(true);
+        setShowShare(true);
+      }
     }
-  }, [bonesLeft, gameOver]);
+  }, [bonesLeft, gameOver, level, levelComplete]);
 
   // Cleanup mud timeout
   useEffect(() => {
@@ -174,7 +198,11 @@ export default function Home() {
 
   // Restart game
   function restart() {
-    window.location.reload(); // simplest way to reset everything
+    setLevel(1);
+    setScore(0);
+    setGameOver(false);
+    setLevelComplete(false);
+    setShowShare(false);
   }
 
   // Share button stub
@@ -191,7 +219,7 @@ export default function Home() {
   return (
     <main className="min-h-screen p-4 flex flex-col items-center justify-center bg-[#6B3F1D] text-white">
       <h1 className="text-2xl font-bold mb-2">🐶 Brownie’s Bone Hunt</h1>
-      <p className="text-sm mb-2">Use arrow keys to move. Collect 🦴, avoid 💩!</p>
+      <p className="text-sm mb-2">Level {level} / {MAX_LEVEL} &bull; Use arrow keys to move. Collect 🦴, avoid 💩!</p>
       <div className="flex gap-6 mb-4">
         <span>⏰ {timer}s</span>
         <span>🦴 {score}</span>
@@ -199,8 +227,8 @@ export default function Home() {
       <div
         className="grid gap-1 mb-4"
         style={{
-          gridTemplateColumns: `repeat(${GRID_SIZE}, 2.5rem)`,
-          gridTemplateRows: `repeat(${GRID_SIZE}, 2.5rem)`,
+          gridTemplateColumns: `repeat(${gridSize}, 2.5rem)`,
+          gridTemplateRows: `repeat(${gridSize}, 2.5rem)`,
           background: "#4B2E13",
           borderRadius: 12,
           padding: 8,
@@ -228,7 +256,22 @@ export default function Home() {
           ))
         )}
       </div>
-      {gameOver ? (
+      {levelComplete && !gameOver ? (
+        <div className="text-center mb-4">
+          <p className="text-xl font-bold mb-2">Level {level} Complete!</p>
+          <p className="text-base">Get ready for the next level...</p>
+        </div>
+      ) : gameOver && level === MAX_LEVEL ? (
+        <div className="text-center mb-4">
+          <p className="text-xl font-bold mb-2">congrats you horny dog 😏</p>
+          <button
+            onClick={restart}
+            className="mt-2 px-4 py-2 bg-yellow-700 text-white rounded-xl mr-2"
+          >
+            Restart
+          </button>
+        </div>
+      ) : gameOver ? (
         <div className="text-center mb-4">
           <p className="text-xl font-bold mb-2">
             Game Over! You collected {score} bone{score === 1 ? "" : "s"}.
