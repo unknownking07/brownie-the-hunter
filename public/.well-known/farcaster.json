@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjI0MDQ4NiwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDc5OWZmRGFlYzM4QTg4MWI3OTNBQjE3QUYwOEI3RmE5Nzk0ZDE2QzMifQ",
+    "payload": "eyJkb21haW4iOiJicm93bmllLXRoZS1odW50ZXIudmVyY2VsLmFwcCJ9",
+    "signature": "MHhjNjIwMjk5OTNhYjE1NTZmOTM3MTFhNDNmNjc1YTNiZGM2Nzg0ZDA0MDY1MjQyMWVjOTBhMjdjMjcyOGQ0MGI4Nzg2NWYzYmUzM2JlY2YzYTRiY2MyYWQwNGU4NmY0YWExYjk0OTRmZWFkZjk5YmZkYTMxYmExOTkyNWUxNGUxMDFj"
+  },
+  "frame": {
+    "version": "1",
+    "name": "Brownie the Hunter",
+    "iconUrl": "https://brownie-the-hunter.vercel.app/icon.png",
+    "homeUrl": "https://brownie-the-hunter.vercel.app",
+    "imageUrl": "https://brownie-the-hunter.vercel.app/image.png",
+    "buttonTitle": "Play Brownie the Hunter!",
+    "splashImageUrl": "https://brownie-the-hunter.vercel.app/splash.png",
+    "splashBackgroundColor": "#6B3F1D",
+    "webhookUrl": "https://brownie-the-hunter.vercel.app/api/webhook"
+  }
+}
