@@ -19,17 +19,15 @@ export default function Home() {
 
   // ✅ Proper Farcaster MiniApp SDK usage
   useEffect(() => {
-    const init = async () => {
+    const readyApp = async () => {
       try {
-        const { viewer } = await sdk.init();
-        if (viewer?.canInteract && viewer.fid) {
-          setUserName(viewer.username || "You");
-        }
+        await sdk.actions.ready();
+        // If user info becomes available from the SDK, setUserName here.
       } catch (e) {
-        console.warn("Farcaster SDK init failed", e);
+        console.warn("Farcaster SDK ready() failed", e);
       }
     };
-    init();
+    readyApp();
   }, []);
 
   useEffect(() => {
